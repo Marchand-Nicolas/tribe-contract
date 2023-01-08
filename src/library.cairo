@@ -15,6 +15,9 @@ from starkware.cairo.common.signature import verify_ecdsa_signature
 from openzeppelin.token.erc721.library import ERC721
 from openzeppelin.access.ownable.library import Ownable
 
+// Local dependencies
+from src.interfaces.IStarknetIDNamingContract import IStarknetIDNamingContract
+
 //
 // Storage
 //
@@ -27,6 +30,14 @@ func _freeId() -> (id : Uint256) {
 func _public_key() -> (publicKey: felt) {
 }
 
+@storage_var
+func _naming_contract() -> (address: felt) {
+}
+
+@storage_var
+func _blacklisted_domains(domain: felt) -> (isBlacklisted: felt) {
+}
+
 namespace Tribe {
     //
     // Initializer
@@ -34,9 +45,10 @@ namespace Tribe {
 
     @external
     func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-        public_key: felt
+        public_key: felt, starknet_id_naming_contract: felt
     ) {
         _public_key.write(public_key);
+        _naming_contract.write(starknet_id_naming_contract);
         return ();
     }
 
@@ -50,6 +62,10 @@ namespace Tribe {
 
     func getPublicKey{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (publicKey: felt) {
         return _public_key.read();
+    }
+
+    func getNamingContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (address: felt) {
+        return _naming_contract.read();
     }
 
     func tokenURI{
@@ -96,21 +112,34 @@ namespace Tribe {
 
     func mint{pedersen_ptr: HashBuiltin*, syscall_ptr: felt*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*}(
         sig: (felt, felt),
+        domain: felt
     ) {
-        let (player) = get_caller_address();
+        alloc_locals;
+        let (address) = get_caller_address();
+
+        // Check if the user's domain is not blacklisted
+        let (naming_contract) = _naming_contract.read();
+        let (domain_len, _domain) = IStarknetIDNamingContract.address_to_domain(naming_contract, address);
+        assert domain_len = 1;
+        assert domain = [_domain];
+        let domain = [_domain];
+        assert_domain_not_blacklisted(domain);
 
         // Get NFT id
         let (oldId) = _freeId.read();
         let (newId, _) = uint256_add(oldId, Uint256(1, 0));
 
         // Check if the signature is valid
-        let (messageHash) = hash2{hash_ptr=pedersen_ptr}(player, 0);
+        let (messageHash) = hash2{hash_ptr=pedersen_ptr}(address, domain);
         let (public_key) = _public_key.read();
         verify_ecdsa_signature(messageHash, public_key, sig[0], sig[1]);
 
         // Mint NFT
-        ERC721._mint(player, newId);
+        ERC721._mint(address, newId);
         _freeId.write(newId);
+
+        // Blacklist domain
+        _blacklisted_domains.write(domain, 1);
         return ();
     }
 
@@ -118,6 +147,13 @@ namespace Tribe {
         alloc_locals;
         Ownable.assert_only_owner();
         _public_key.write(public_key);
+        return ();
+    }
+
+    func setNamingContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(new_address : felt) {
+        alloc_locals;
+        Ownable.assert_only_owner();
+        _naming_contract.write(new_address);
         return ();
     }
 }
@@ -166,4 +202,11 @@ func getStaticURI() -> (staticURI_len : felt, staticURI : felt*) {
     assert [staticURI + 34] = 116;
     assert [staticURI + 35] = 47;
     return (36, staticURI);
+}
+
+func assert_domain_not_blacklisted{pedersen_ptr: HashBuiltin*, syscall_ptr: felt*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*}(domain : felt) {
+    alloc_locals;
+    let (isBlacklisted) = _blacklisted_domains.read(domain);
+    assert isBlacklisted = 0;
+    return ();
 }

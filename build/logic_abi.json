@@ -135,6 +135,10 @@
             {
                 "name": "public_key",
                 "type": "felt"
+            },
+            {
+                "name": "starknet_id_naming_contract",
+                "type": "felt"
             }
         ],
         "name": "initializer",
@@ -159,6 +163,18 @@
         "outputs": [
             {
                 "name": "publicKey",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getNamingContract",
+        "outputs": [
+            {
+                "name": "address",
                 "type": "felt"
             }
         ],
@@ -316,6 +332,10 @@
             {
                 "name": "sig",
                 "type": "(felt, felt)"
+            },
+            {
+                "name": "domain",
+                "type": "felt"
             }
         ],
         "name": "mint",
@@ -330,6 +350,17 @@
             }
         ],
         "name": "setPublicKey",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "new_address",
+                "type": "felt"
+            }
+        ],
+        "name": "setNamingContract",
         "outputs": [],
         "type": "function"
     },

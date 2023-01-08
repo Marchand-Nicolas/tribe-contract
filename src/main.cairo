@@ -21,7 +21,7 @@ from src.library import Tribe
 
 @external
 func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    name: felt, symbol: felt, owner: felt, proxy_admin: felt, public_key: felt
+    name: felt, symbol: felt, owner: felt, proxy_admin: felt, public_key: felt, starknet_id_naming_contract: felt
 ) {
     // Desc:
     //   Initialize the contract with the name, symbol, owner and proxy admin.
@@ -40,7 +40,7 @@ func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
     ERC721.initializer(name, symbol);
     Ownable.initializer(owner);
     Proxy.initializer(proxy_admin);
-    Tribe.initializer(public_key);
+    Tribe.initializer(public_key, starknet_id_naming_contract);
     return ();
 }
 
@@ -56,6 +56,11 @@ func getFreeId{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
 @view
 func getPublicKey{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (publicKey : felt) {
     return Tribe.getPublicKey();
+}
+
+@view
+func getNamingContract{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}() -> (address: felt) {
+    return Tribe.getNamingContract();
 }
 
 @view
@@ -123,13 +128,20 @@ func owner{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() ->
 //
 
 @external
-func mint{pedersen_ptr: HashBuiltin*, syscall_ptr: felt*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*}(sig: (felt, felt)) {
-    return Tribe.mint(sig);
+func mint{pedersen_ptr: HashBuiltin*, syscall_ptr: felt*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*}(sig: (felt, felt), domain: felt) {
+    return Tribe.mint(sig, domain);
 }
 
 @external
 func setPublicKey{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(public_key: felt) {
     return Tribe.setPublicKey(public_key);
+}
+
+@external
+func setNamingContract{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    new_address: felt
+) {
+    return Tribe.setNamingContract(new_address);
 }
 
 @external
